@@ -22,7 +22,7 @@
         <p class="eyebrow">NIR · FOOD · DATA EXPLORER</p>
         <h1><em>NIRS4FoodPFN</em></h1>
         <p class="intro">O NIRS4FoodPFN investiga priors sintéticos para modelagem NIR de alimentos. Este atlas reúne perfis e metadados para caracterizar variação entre matrizes, instrumentos e domínios, orientar a cobertura do prior e comparar alimentos com referências de plantas, folhas e solos.</p>
-        <p class="hero-context">Curvas locais vêm dos dados organizados do projeto. O catálogo externo nirs4all-datasets amplia a comparação; perfis externos aparecem apenas quando a licença está marcada como pública. Os direitos das 79 fichas locais ainda precisam ser revisados antes da publicação.</p>
+        <p class="hero-context">A visualização mostra somente fontes NIR. As curvas locais de leite e mamão são médias agregadas autorizadas para análise; os espectros individuais não são publicados. Curvas nirs4all aparecem quando estão no tier público.</p>
       </div>
       <div class="hero-stats" id="heroStats"><div class="skeleton"></div></div>
     </section>
@@ -45,7 +45,6 @@
           <div class="filters">
             <label>Domínio<select id="domainFilter"><option value="">Todos</option></select></label>
             <label>Eixo<select id="unitFilter"><option value="">Todos</option></select></label>
-            <label>Modalidade<select id="modalityFilter"><option value="">Todas</option></select></label>
           </div>
           <div class="selection-actions"><span>Fontes espectrais · locais e nirs4all</span><button id="clearSelection" class="text-button">limpar</button></div>
           <div id="sourceList" class="source-list"><div class="empty-state">Lendo perfis espectrais…</div></div>
@@ -68,7 +67,7 @@
           <div id="legend" class="legend"></div>
           <div id="bandLegend" class="band-legend" aria-live="polite"></div>
           <div id="profileInfo" class="profile-info"></div>
-          <div class="band-note"><b>Como ler as bandas destacadas</b><span>Água — O–H · lipídios — C–H · proteínas — N–H/C–H · amidos/açúcares — O–H/C–O · fibras vegetais — celulose, hemicelulose e lignina · pigmentos de matrizes vegetais — clorofila/carotenoides no visível · estrutura/espalhamento — efeito óptico do tecido, não banda molecular.</span><small>As regiões se sobrepõem e variam com matriz, sinal e pré-processamento. São pistas para leitura, não identificação isolada de compostos. Estudos: <a href="https://pubmed.ncbi.nlm.nih.gov/8906636/" target="_blank" rel="noopener noreferrer">amido em farinha</a> · <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC12526761/" target="_blank" rel="noopener noreferrer">celulose/lignina em madeira</a> · <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC11764486/" target="_blank" rel="noopener noreferrer">pigmentos e água em damasco</a>.</small></div>
+          <div class="band-note"><b>Como ler as bandas NIR destacadas</b><span>Água — O–H · lipídios — C–H · proteínas — N–H/C–H · amidos/açúcares — O–H/C–O · fibras vegetais — celulose, hemicelulose e lignina.</span><small>As regiões se sobrepõem e variam com matriz, sinal e pré-processamento. São pistas para leitura, não identificação isolada de compostos. Estudos: <a href="https://pubmed.ncbi.nlm.nih.gov/8906636/" target="_blank" rel="noopener noreferrer">amido em farinha</a> · <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC12526761/" target="_blank" rel="noopener noreferrer">celulose/lignina em madeira</a>.</small></div>
           <div class="chart-foot"><span>A faixa é ±1 DP nos perfis locais ou percentis 5–95 nos cards públicos nirs4all.</span><span>Curvas agregadas por fonte; eixos, sinal e modalidade incompatíveis são mantidos separados.</span></div>
         </section>
       </div>
