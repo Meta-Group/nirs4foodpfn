@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Explorador de espectros NIR e matrizes de alimentos do projeto NIRS4FoodPFN">
+  <title>NIRS4FoodPFN · Spectra Atlas</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="./" aria-label="NIRS4FoodPFN início">
+      <span class="brand-mark">N</span>
+      <span>NIRS4FoodPFN <small>SPECTRA ATLAS</small></span>
+    </a>
+    <div class="topnote"><span class="live-dot"></span> Catálogo de análise · sem matrizes brutas</div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div>
+        <p class="eyebrow">NIR · FOOD · DATA EXPLORER</p>
+        <h1><em>NIRS4FoodPFN</em></h1>
+        <p class="intro">O NIRS4FoodPFN investiga priors sintéticos para modelagem NIR de alimentos. Este atlas reúne perfis e metadados para caracterizar variação entre matrizes, instrumentos e domínios, orientar a cobertura do prior e comparar alimentos com referências de plantas, folhas e solos.</p>
+        <p class="hero-context">Curvas locais vêm dos dados organizados do projeto. O catálogo externo nirs4all-datasets amplia a comparação; perfis externos aparecem apenas quando a licença está marcada como pública. Os direitos das 79 fichas locais ainda precisam ser revisados antes da publicação.</p>
+      </div>
+      <div class="hero-stats" id="heroStats"><div class="skeleton"></div></div>
+    </section>
+
+    <nav class="tabs" aria-label="Seções do dashboard">
+      <button class="tab active" data-view="compare">01 <span>Comparar espectros</span></button>
+      <button class="tab" data-view="catalog">02 <span>Catálogo de matrizes</span></button>
+      <div class="tab-spacer"></div>
+      <span class="build-label" id="buildLabel">carregando catálogo…</span>
+    </nav>
+
+    <section id="compareView" class="view active">
+      <div class="compare-layout">
+        <aside class="panel picker-panel">
+          <div class="panel-head">
+            <div><p class="eyebrow">SELEÇÃO</p><h2>Curvas para comparar</h2></div>
+            <span class="count-pill" id="selectionCount">0 selecionadas</span>
+          </div>
+          <label class="searchbox"><span>⌕</span><input id="searchInput" type="search" placeholder="Buscar dataset, alimento, instrumento…"></label>
+          <div class="filters">
+            <label>Domínio<select id="domainFilter"><option value="">Todos</option></select></label>
+            <label>Eixo<select id="unitFilter"><option value="">Todos</option></select></label>
+            <label>Modalidade<select id="modalityFilter"><option value="">Todas</option></select></label>
+          </div>
+          <div class="selection-actions"><span>Fontes espectrais · locais e nirs4all</span><button id="clearSelection" class="text-button">limpar</button></div>
+          <div id="sourceList" class="source-list"><div class="empty-state">Lendo perfis espectrais…</div></div>
+          <div class="selection-foot">Escolha até 12 curvas com perfil disponível. Registros externos sem curva ficam no catálogo para descoberta, mas têm licença pendente ou não pública.</div>
+        </aside>
+
+        <section class="panel chart-panel">
+          <div class="panel-head chart-head">
+            <div><p class="eyebrow">PERFIL ESPECTRAL</p><h2>Média por canal</h2></div>
+            <div class="chart-actions">
+              <label class="toggle"><input type="checkbox" id="bandToggle" checked><span class="toggle-ui"></span><span>realçar bandas</span></label>
+              <label class="toggle"><input type="checkbox" id="sdToggle"><span class="toggle-ui"></span><span>incerteza do perfil</span></label>
+              <button id="clearChartSelection" class="clear-button" type="button">Limpar seleção</button>
+            </div>
+          </div>
+          <div id="chartNote" class="chart-note">Selecione fontes para iniciar a comparação.</div>
+          <div class="chart-wrap">
+            <svg id="spectrumChart" role="img" aria-label="Gráfico de curvas médias NIR"></svg>
+          </div>
+          <div id="legend" class="legend"></div>
+          <div id="bandLegend" class="band-legend" aria-live="polite"></div>
+          <div id="profileInfo" class="profile-info"></div>
+          <div class="band-note"><b>Como ler as bandas destacadas</b><span>Água — O–H · lipídios — C–H · proteínas — N–H/C–H · amidos/açúcares — O–H/C–O · fibras vegetais — celulose, hemicelulose e lignina · pigmentos de matrizes vegetais — clorofila/carotenoides no visível · estrutura/espalhamento — efeito óptico do tecido, não banda molecular.</span><small>As regiões se sobrepõem e variam com matriz, sinal e pré-processamento. São pistas para leitura, não identificação isolada de compostos. Estudos: <a href="https://pubmed.ncbi.nlm.nih.gov/8906636/" target="_blank" rel="noopener noreferrer">amido em farinha</a> · <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC12526761/" target="_blank" rel="noopener noreferrer">celulose/lignina em madeira</a> · <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC11764486/" target="_blank" rel="noopener noreferrer">pigmentos e água em damasco</a>.</small></div>
+          <div class="chart-foot"><span>A faixa é ±1 DP nos perfis locais ou percentis 5–95 nos cards públicos nirs4all.</span><span>Curvas agregadas por fonte; eixos, sinal e modalidade incompatíveis são mantidos separados.</span></div>
+        </section>
+      </div>
+
+      <section class="insight-grid">
+        <article class="panel insight-card">
+          <div class="panel-head"><div><p class="eyebrow">COBERTURA ESPECTRAL</p><h2>Onde os dados se encontram</h2></div></div>
+          <div id="coverageChart" class="coverage-chart"></div>
+          <p class="muted">Cada faixa mostra a cobertura de um conjunto na unidade selecionada. Diferentes unidades e famílias espectrais devem ser analisadas separadamente.</p>
+        </article>
+        <article class="panel insight-card">
+          <div class="panel-head"><div><p class="eyebrow">LEITURA DO CATÁLOGO</p><h2>O que comparar</h2></div></div>
+          <div class="insight-list">
+            <div><b class="insight-number">A</b><span><strong>Preparação</strong><small>Inteiro, moído, polpa e derivados podem mudar espalhamento e linha de base.</small></span></div>
+            <div><b class="insight-number">B</b><span><strong>Instrumento e faixa</strong><small>Resolução, cobertura, unidade e fonte determinam se duas curvas são comparáveis.</small></span></div>
+            <div><b class="insight-number">C</b><span><strong>Estado do sinal</strong><small>Espectros brutos, SNV, MSC e derivadas precisam de comparações separadas.</small></span></div>
+            <div><b class="insight-number">D</b><span><strong>Alvo e desenho amostral</strong><small>Consulte rótulos, repetições e splits antes de formar grupos ou avaliar modelos.</small></span></div>
+          </div>
+        </article>
+      </section>
+    </section>
+
+    <section id="catalogView" class="view">
+      <section class="panel table-panel">
+          <div class="panel-head">
+          <div><p class="eyebrow">INVENTÁRIO · PROJETO + NIRS4ALL</p><h2>Matrizes disponíveis</h2></div>
+          <label class="searchbox table-search"><span>⌕</span><input id="tableSearch" type="search" placeholder="Filtrar catálogo…"></label>
+        </div>
+        <div class="table-scroll"><table><thead><tr>
+          <th>Dataset</th><th>Domínio</th><th>Matriz(es)</th><th>Faixa</th><th>Alvos</th><th>Processamento</th><th>Acesso</th>
+        </tr></thead><tbody id="catalogRows"></tbody></table></div>
+        <p class="table-foot" id="tableFoot"></p>
+      </section>
+      <section id="detailPanel" class="panel detail-panel hidden"></section>
+    </section>
+
+    <footer>
+      <span>NIRS4FoodPFN · Explorador local de metadados e perfis médios</span>
+      <span>Não disponibiliza linhas espectrais nem identificadores de amostra.</span>
+    </footer>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>
