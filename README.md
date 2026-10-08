@@ -13,8 +13,8 @@ Open http://localhost:8000. Serve the directory over HTTP; opening index.html as
 
 ## Data included
 
-The bundle contains only NIR records: 97 nirs4all catalog entries and four project-owned milk/papaya datasets. The 41 external curves are included only where nirs4all marks the source public. The five project curves contain per-channel means and standard deviations for milk transmission (dark and white channels) and three papaya datasets. No raw spectra, observation rows, target values, sample identifiers, minima, or maxima are included for the project datasets.
+The bundle shows only NIR sources. It includes all 75 NIR source profiles from the 73 local project datasets, represented by per-channel means and standard deviations. It also includes 97 NIR catalog entries from nirs4all; 41 external curves are included only where nirs4all marks the source public. No raw spectra, observation rows, sample identifiers, or local target values are included.
 
-Only the milk and papaya aggregate profiles approved by the project owner are included from local data. Other local datasets and external records without cleared redistribution rights have no published curve. The nirs4all cards and datasheets are CC-BY-4.0; that does not override each external dataset's license.
+The local aggregate curves were requested for public analysis by the project owner. Other modalities are excluded. External nirs4all curves without confirmed redistribution rights remain unavailable. The nirs4all cards and datasheets are CC-BY-4.0; that does not override each external dataset's license.
 
 Band annotations are approximate interpretations of overlapping NIR regions. They describe likely absorption mechanisms and matrix effects, not unique compound identification.
