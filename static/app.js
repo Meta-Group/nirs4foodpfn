@@ -20,9 +20,10 @@ const bands = [
  {a:2050,b:2160,label:"Fibras vegetais",plotLabel:"Fibras · celulose/hemicelulose/lignina",bond:"C–H / O–H",color:"#9b7653",scope:"nir",botanical:true,anchor:1800},
  {a:2250,b:2350,label:"Fibras vegetais",plotLabel:"Fibras · celulose/lignina",bond:"Celulose / lignina",color:"#9b7653",scope:"nir",botanical:true,anchor:1800},
 ];
-const state = {catalog:null,sources:[],selected:new Set(),profiles:new Map(),unit:"",domain:"",presetLabel:""};
+const state = {catalog:null,sources:[],selected:new Set(),profiles:new Map(),unit:"",domain:"",presetLabel:"",windowNm:null,presetRequest:0};
 const comparisonPresets = {
  "grains-short": {label:"Grãos · 950–1650 nm · Grainit + Perten", ids:["sensaifood_grainit_corn","sensaifood_grainit_barley","sensaifood_grainit_wheat","sensaifood_perten_corn","sensaifood_perten_barley","sensaifood_perten_wheat"]},
+ "barley-wheat-window": {label:"Cevada × trigo · grãos, intacto/moído e farinhas", windowNm:[950,1650], ids:["sensaifood_grainit_barley","sensaifood_perten_barley","sensaifood_grainit_wheat","sensaifood_perten_wheat","wheat_don_intact_milled","dados_nir_farinha_renata","dados_nir_farinha_sm","dados_nir_farinha_venturelli"]},
  "cordoba-wide": {label:"Grãos · 1100–2498 nm · Córdoba", ids:["sensaifood_cordoba_maize","sensaifood_cordoba_barley","sensaifood_cordoba_wheat"]},
  "flours": {label:"Farinha · 902–1701 nm", ids:["dados_nir_farinha_renata","dados_nir_farinha_sm","dados_nir_farinha_venturelli"]},
  "wheat-don": {label:"Trigo · intacto × moído", sources:[["wheat_don_intact_milled","Xintact"],["wheat_don_intact_milled","Xmilled"]]},
@@ -32,7 +33,18 @@ const $ = id => document.getElementById(id);
 function esc(s){return String(s===null||s===undefined?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 function fmt(n,d){return n===null||n===undefined||n===""?"—":Number.isFinite(Number(n))?Number(n).toLocaleString("pt-BR",{maximumFractionDigits:d||0}):"—";}
 function key(d,s){return d.id+"::"+s.source_id;}
-function label(x){return (x.dataset.short_name||x.dataset.name)+" · "+(x.short_name||x.name||x.source_id);}
+function label(x){
+ const id=x.dataset.id;
+ if(id.startsWith("sensaifood_")){
+  const species=/_(corn|maize)(_|$)/.test(id)?"Milho":/_(barley)(_|$)/.test(id)?"Cevada":/_(wheat)(_|$)/.test(id)?"Trigo":null;
+  const instrument=id.includes("_grainit_")?"Grainit":id.includes("_perten_")?"Perten":id.includes("_cordoba_")?"Córdoba":null;
+  if(species&&instrument)return species+" · "+instrument;
+ }
+ if(id==="wheat_don_intact_milled")return "Trigo DON · "+(x.source_id==="Xintact"?"intacto":"moído");
+ if(id.startsWith("dados_nir_farinha_"))return "Farinha · "+id.slice("dados_nir_farinha_".length);
+ if(id==="maize_mycotoxins_nir")return "Milho · micotoxinas";
+ return (x.dataset.short_name||x.dataset.name)+" · "+(x.short_name||x.name||x.source_id);
+}
 function allSources(){return state.catalog.datasets.flatMap(d=>d.sources.map(s=>Object.assign({},s,{dataset:d,key:key(d,s)})));}
 function setOptions(id,values,blank){const el=$(id),prior=el.value;el.innerHTML='<option value="">'+blank+'</option>'+values.map(v=>'<option value="'+esc(v)+'">'+esc(v)+'</option>').join("");if(values.includes(prior))el.value=prior;}
 function init(){
@@ -48,20 +60,22 @@ function init(){
  setOptions("domainFilter",[...new Set(state.sources.map(x=>x.dataset.domain))].sort(),"Todos");
  setOptions("unitFilter",[...new Set(state.sources.map(x=>x.axis_unit))].sort(),"Todos os eixos");
  $("domainFilter").addEventListener("change",e=>{state.domain=e.target.value;renderSources();coverage();});
- $("unitFilter").addEventListener("change",e=>{const next=e.target.value;const active=[...state.selected].map(k=>state.sources.find(x=>x.key===k)).find(Boolean);if(active&&next&&active.axis_unit!==next)state.selected.clear();state.unit=next;renderSources();renderChart();coverage();});
+ $("unitFilter").addEventListener("change",e=>{const next=e.target.value;const active=[...state.selected].map(k=>state.sources.find(x=>x.key===k)).find(Boolean);if(active&&next&&active.axis_unit!==next){state.presetRequest++;state.selected.clear();state.presetLabel="";state.windowNm=null;document.querySelectorAll(".preset-button").forEach(b=>b.classList.remove("active"));}state.unit=next;renderSources();renderChart();coverage();});
  $("searchInput").addEventListener("input",renderSources);$("tableSearch").addEventListener("input",table);$("taskFilter").addEventListener("change",table);
  $("sdToggle").addEventListener("change",chart);$("bandToggle").addEventListener("change",chart);
  ["clearSelection","clearChartSelection"].forEach(id=>$(id).addEventListener("click",clearSelection));
  document.querySelectorAll(".preset-button").forEach(b=>b.addEventListener("click",()=>applyPreset(b.dataset.preset)));
  document.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>switchView(b.dataset.view)));
- renderSources();table();coverage();applyPreset("grains-short");
+ renderSources();table();coverage();const initialPreset=new URLSearchParams(window.location.search).get("grupo");applyPreset(comparisonPresets[initialPreset]?initialPreset:"grains-short");
 }
-function clearSelection(){state.selected.clear();state.presetLabel="";state.unit="";state.domain="";$("unitFilter").value="";$("domainFilter").value="";document.querySelectorAll(".preset-button").forEach(b=>b.classList.remove("active"));renderSources();renderChart();}
+function clearSelection(){state.presetRequest++;state.selected.clear();state.presetLabel="";state.windowNm=null;state.unit="";state.domain="";$("unitFilter").value="";$("domainFilter").value="";document.querySelectorAll(".preset-button").forEach(b=>b.classList.remove("active"));const url=new URL(window.location.href);url.searchParams.delete("grupo");window.history.replaceState(null,"",url);renderSources();renderChart();}
 async function applyPreset(id){
  const preset=comparisonPresets[id];if(!preset)return;
+ const request=++state.presetRequest;
  const wanted=preset.sources||preset.ids.flatMap(datasetId=>state.sources.filter(x=>x.dataset.id===datasetId).map(x=>[datasetId,x.source_id]));
  const matches=wanted.map(([datasetId,sourceId])=>state.sources.find(x=>x.dataset.id===datasetId&&x.source_id===sourceId)).filter(x=>x&&x.profile);
- state.selected.clear();state.presetLabel=preset.label;
+ state.selected.clear();state.presetLabel=preset.label;state.windowNm=preset.windowNm||null;
+ const url=new URL(window.location.href);url.searchParams.set("grupo",id);window.history.replaceState(null,"",url);
  $("searchInput").value="";
  state.domain="";state.unit="nm";$("domainFilter").value="";$("unitFilter").value="nm";
  document.querySelectorAll(".preset-button").forEach(b=>b.classList.toggle("active",b.dataset.preset===id));
@@ -70,12 +84,13 @@ async function applyPreset(id){
  await Promise.all(matches.map(async src=>{
   if(state.profiles.has(src.key))return;
   try{const r=await fetch("./data/"+src.profile);if(!r.ok)throw Error(r.status);state.profiles.set(src.key,await r.json());}
-  catch(_){state.selected.delete(src.key);}
+  catch(_){if(request===state.presetRequest)state.selected.delete(src.key);}
  }));
+ if(request!==state.presetRequest)return;
  renderSources();renderChart();
 }
 function switchView(v){document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("active",b.dataset.view===v));$("compareView").classList.toggle("active",v==="compare");$("catalogView").classList.toggle("active",v==="catalog");}
-function visibleSources(){const q=$("searchInput").value.trim().toLowerCase();return state.sources.filter(x=>{const t=[x.dataset.id,x.dataset.name,x.dataset.domain,x.instrument_name,x.source_id].join(" ").toLowerCase();return(!q||t.includes(q))&&(!state.domain||x.dataset.domain===state.domain)&&(!state.unit||x.axis_unit===state.unit);});}
+function visibleSources(){const q=$("searchInput").value.trim().toLowerCase();return state.sources.filter(x=>{const t=[x.dataset.id,x.dataset.name,x.dataset.domain,x.instrument_name,x.source_id].join(" ").toLowerCase();return(!q||t.includes(q))&&(!state.domain||x.dataset.domain===state.domain)&&(!state.unit||x.axis_unit===state.unit);}).sort((a,b)=>Number(state.selected.has(b.key))-Number(state.selected.has(a.key)));}
 function renderSources(){
  const items=visibleSources();
  $("sourceList").innerHTML=items.length?items.map(x=>'<label class="source-option '+(!x.profile?'unavailable':'')+'"><input type="checkbox" data-key="'+esc(x.key)+'" '+(state.selected.has(x.key)?"checked":"")+(!x.profile?' disabled':'')+'><span><span class="source-name">'+esc(label(x))+'</span><span class="source-sub">'+fmt(x.n_observations)+' obs · '+fmt(x.n_channels)+' canais · '+esc(x.axis_unit)+(x.instrument_name?" · "+esc(x.instrument_name):"")+'</span><span class="source-origin">'+(x.dataset.dataset_kind==="external"?"nirs4all · "+esc(x.dataset.application_group)+" · "+esc(x.dataset.tier)+(!x.profile?" · curva indisponível":" · perfil público") : (x.dataset.public_aggregate?"curva agregada do projeto":"dados locais do projeto"))+'</span></span><span class="source-tag">'+esc(x.dataset.domain)+'</span></label>').join(""):'<div class="empty-state">Nenhuma fonte NIR corresponde aos filtros.</div>';
@@ -87,6 +102,7 @@ async function toggle(k,on){
   if(state.selected.size>=12){alert("O comparador aceita até 12 curvas.");renderSources();return;}
   const cur=[...state.selected].map(v=>state.sources.find(x=>x.key===v)).find(Boolean),next=state.sources.find(x=>x.key===k);
   if(cur&&next&&cur.axis_unit!==next.axis_unit){alert("Eixos diferentes: "+cur.axis_unit+" e "+next.axis_unit+". Compare uma unidade por vez.");renderSources();return;}
+  if(state.windowNm&&next&&next.axis_min!==null&&next.axis_max!==null&&Number.isFinite(Number(next.axis_min))&&Number.isFinite(Number(next.axis_max))&&(Number(next.axis_max)<state.windowNm[0]||Number(next.axis_min)>state.windowNm[1])){alert("Esta fonte não cobre o recorte "+state.windowNm[0]+"–"+state.windowNm[1]+" nm.");renderSources();return;}
   if(cur&&next&&cur.signal_type!==next.signal_type&&cur.signal_type!=="unknown"&&next.signal_type!=="unknown"){alert("Sinais com escalas diferentes: "+cur.signal_type+" e "+next.signal_type+". Compare separadamente.");renderSources();return;}
   if(cur&&next&&cur.modality!==next.modality&&cur.modality!=="unknown"&&next.modality!=="unknown"){alert("Modalidades diferentes: "+cur.modality+" e "+next.modality+". Compare separadamente.");renderSources();return;}
   state.selected.add(k);
@@ -95,16 +111,16 @@ async function toggle(k,on){
  }else state.selected.delete(k);
  renderSources();renderChart();
 }
-function renderChart(){if(!state.selected.size){$("chartNote").textContent=state.presetLabel?"Nenhuma curva disponível para este grupo.":"Selecione fontes para iniciar a comparação.";$("spectrumChart").innerHTML='<text x="50%" y="50%" text-anchor="middle" class="axis-text">As curvas médias aparecem aqui</text>';$("legend").innerHTML="";$("bandLegend").innerHTML="";$("profileInfo").innerHTML="";return;}const s=[...state.selected].map(k=>state.sources.find(x=>x.key===k)).filter(Boolean);$("chartNote").textContent=s.length+" perfil(is) · eixo "+s[0].axis_unit+" · sem interpolação entre canais"+(state.presetLabel?" · "+state.presetLabel:"");chart();}
+function renderChart(){if(!state.selected.size){$("chartNote").textContent=state.presetLabel?"Nenhuma curva disponível para este grupo.":"Selecione fontes para iniciar a comparação.";$("spectrumChart").innerHTML='<text x="50%" y="50%" text-anchor="middle" class="axis-text">As curvas médias aparecem aqui</text>';$("legend").innerHTML="";$("bandLegend").innerHTML="";$("profileInfo").innerHTML="";return;}const s=[...state.selected].map(k=>state.sources.find(x=>x.key===k)).filter(Boolean);$("chartNote").textContent=s.length+" perfil(is) · eixo "+s[0].axis_unit+(state.windowNm?" · recorte "+state.windowNm[0]+"–"+state.windowNm[1]+" nm":"")+" · sem interpolação entre canais"+(state.presetLabel?" · "+state.presetLabel:"");chart();}
 function chart(){
  const selected=[...state.selected].map(k=>state.sources.find(x=>x.key===k)).filter(Boolean);if(!selected.length)return;
  const svg=$("spectrumChart"),W=Math.max(320,svg.clientWidth||800),H=370;
  let xmin=Infinity,xmax=-Infinity,ymin=Infinity,ymax=-Infinity;
- const series=selected.map((s,i)=>{const p=state.profiles.get(s.key);if(!p)return null;const pts=p.channels.map((x,j)=>({x:Number(x),y:p.mean[j]===null?NaN:Number(p.mean[j]),sd:p.sd&&p.sd[j]!==null?Number(p.sd[j]):0,lo:p.q05&&p.q05[j]!==null?Number(p.q05[j]):null,hi:p.q95&&p.q95[j]!==null?Number(p.q95[j]):null})).filter(x=>Number.isFinite(x.x)&&Number.isFinite(x.y));pts.forEach(x=>{xmin=Math.min(xmin,x.x);xmax=Math.max(xmax,x.x);ymin=Math.min(ymin,x.y);ymax=Math.max(ymax,x.y);if($("sdToggle").checked){ymin=Math.min(ymin,x.lo===null?x.y-x.sd:x.lo);ymax=Math.max(ymax,x.hi===null?x.y+x.sd:x.hi);}});return{s,p,pts,color:palette[i%palette.length]};}).filter(Boolean);
- if(!series.length||!Number.isFinite(ymin))return;if(xmin===xmax)xmax=xmin+1;if(ymin===ymax){ymin-=.5;ymax+=.5;}const pad=(ymax-ymin)*.08;ymin-=pad;ymax+=pad;
+ const series=selected.map((s,i)=>{const p=state.profiles.get(s.key);if(!p)return null;const pts=p.channels.map((x,j)=>({x:Number(x),y:p.mean[j]===null?NaN:Number(p.mean[j]),sd:p.sd&&p.sd[j]!==null?Number(p.sd[j]):0,lo:p.q05&&p.q05[j]!==null?Number(p.q05[j]):null,hi:p.q95&&p.q95[j]!==null?Number(p.q95[j]):null})).filter(x=>Number.isFinite(x.x)&&Number.isFinite(x.y)&&(!state.windowNm||(x.x>=state.windowNm[0]&&x.x<=state.windowNm[1])));pts.forEach(x=>{xmin=Math.min(xmin,x.x);xmax=Math.max(xmax,x.x);ymin=Math.min(ymin,x.y);ymax=Math.max(ymax,x.y);if($("sdToggle").checked){ymin=Math.min(ymin,x.lo===null?x.y-x.sd:x.lo);ymax=Math.max(ymax,x.hi===null?x.y+x.sd:x.hi);}});return{s,p,pts,color:palette[i%palette.length]};}).filter(it=>it&&it.pts.length);
+ if(!series.length||!Number.isFinite(ymin))return;if(state.windowNm){[xmin,xmax]=state.windowNm;}if(xmin===xmax)xmax=xmin+1;if(ymin===ymax){ymin-=.5;ymax+=.5;}const pad=(ymax-ymin)*.08;ymin-=pad;ymax+=pad;
  const modalities=series.map(it=>String(it.p.modality)),hasNir=modalities.every(v=>/^NIR$/i.test(v));
- const botanical=series.every(it=>/\b(leaf|leaves|plant|vegetation|foliar|fruit|apple|mango|kiwi|wheat|maize|corn|cereal|grain|cucurbita|paprika|pepper|olive|grape|wine|tomato|tomatillo|cassava|sugarcane|potato|rice|cocoa|cacao|coffee|tea|crop|herb|bean|soybean)\b/i.test([it.s.dataset.id,it.s.dataset.name,it.s.dataset.domain].join(" ").replace(/[_-]+/g," ")));
- const bandCapable=series[0].p.axis_unit==="nm"&&(hasNir||hasVisible);
+ const botanical=series.every(it=>/\b(leaf|leaves|plant|vegetation|foliar|fruit|apple|mango|kiwi|wheat|trigo|barley|cevada|maize|milho|corn|cereal|grain|flour|farinha|cucurbita|paprika|pepper|olive|grape|wine|tomato|tomatillo|cassava|sugarcane|potato|rice|cocoa|cacao|coffee|tea|crop|herb|bean|soybean)\b/i.test([it.s.dataset.id,it.s.dataset.name,it.s.dataset.domain].join(" ").replace(/[_-]+/g," ")));
+ const bandCapable=series[0].p.axis_unit==="nm"&&hasNir;
  const visibleBands=bandCapable&&$("bandToggle").checked?bands.filter(b=>b.scope==="nir"&&(!b.botanical||botanical)&&Math.min(b.b,xmax)>Math.max(b.a,xmin)):[];
  const groupNames=[...new Set(visibleBands.map(b=>b.label))];
  const m={l:58,r:18,t:groupNames.length?104:12,b:42},pw=W-m.l-m.r,ph=H-m.t-m.b;
