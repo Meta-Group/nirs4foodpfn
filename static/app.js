@@ -20,7 +20,14 @@ const bands = [
  {a:2050,b:2160,label:"Fibras vegetais",plotLabel:"Fibras · celulose/hemicelulose/lignina",bond:"C–H / O–H",color:"#9b7653",scope:"nir",botanical:true,anchor:1800},
  {a:2250,b:2350,label:"Fibras vegetais",plotLabel:"Fibras · celulose/lignina",bond:"Celulose / lignina",color:"#9b7653",scope:"nir",botanical:true,anchor:1800},
 ];
-const state = {catalog:null,sources:[],selected:new Set(),profiles:new Map(),unit:"",domain:""};
+const state = {catalog:null,sources:[],selected:new Set(),profiles:new Map(),unit:"",domain:"",presetLabel:""};
+const comparisonPresets = {
+ "grains-short": {label:"Grãos · 950–1650 nm · Grainit + Perten", ids:["sensaifood_grainit_corn","sensaifood_grainit_barley","sensaifood_grainit_wheat","sensaifood_perten_corn","sensaifood_perten_barley","sensaifood_perten_wheat"]},
+ "cordoba-wide": {label:"Grãos · 1100–2498 nm · Córdoba", ids:["sensaifood_cordoba_maize","sensaifood_cordoba_barley","sensaifood_cordoba_wheat"]},
+ "flours": {label:"Farinha · 902–1701 nm", ids:["dados_nir_farinha_renata","dados_nir_farinha_sm","dados_nir_farinha_venturelli"]},
+ "wheat-don": {label:"Trigo · intacto × moído", sources:[["wheat_don_intact_milled","Xintact"],["wheat_don_intact_milled","Xmilled"]]},
+ "maize-mycotoxins": {label:"Milho · micotoxinas DON/ZON", ids:["maize_mycotoxins_nir"]}
+};
 const $ = id => document.getElementById(id);
 function esc(s){return String(s===null||s===undefined?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 function fmt(n,d){return n===null||n===undefined||n===""?"—":Number.isFinite(Number(n))?Number(n).toLocaleString("pt-BR",{maximumFractionDigits:d||0}):"—";}
@@ -45,10 +52,28 @@ function init(){
  $("searchInput").addEventListener("input",renderSources);$("tableSearch").addEventListener("input",table);$("taskFilter").addEventListener("change",table);
  $("sdToggle").addEventListener("change",chart);$("bandToggle").addEventListener("change",chart);
  ["clearSelection","clearChartSelection"].forEach(id=>$(id).addEventListener("click",clearSelection));
+ document.querySelectorAll(".preset-button").forEach(b=>b.addEventListener("click",()=>applyPreset(b.dataset.preset)));
  document.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>switchView(b.dataset.view)));
- renderSources();table();coverage();
+ renderSources();table();coverage();applyPreset("grains-short");
 }
-function clearSelection(){state.selected.clear();renderSources();renderChart();}
+function clearSelection(){state.selected.clear();state.presetLabel="";state.unit="";state.domain="";$("unitFilter").value="";$("domainFilter").value="";document.querySelectorAll(".preset-button").forEach(b=>b.classList.remove("active"));renderSources();renderChart();}
+async function applyPreset(id){
+ const preset=comparisonPresets[id];if(!preset)return;
+ const wanted=preset.sources||preset.ids.flatMap(datasetId=>state.sources.filter(x=>x.dataset.id===datasetId).map(x=>[datasetId,x.source_id]));
+ const matches=wanted.map(([datasetId,sourceId])=>state.sources.find(x=>x.dataset.id===datasetId&&x.source_id===sourceId)).filter(x=>x&&x.profile);
+ state.selected.clear();state.presetLabel=preset.label;
+ $("searchInput").value="";
+ state.domain="";state.unit="nm";$("domainFilter").value="";$("unitFilter").value="nm";
+ document.querySelectorAll(".preset-button").forEach(b=>b.classList.toggle("active",b.dataset.preset===id));
+ for(const src of matches)state.selected.add(src.key);
+ renderSources();
+ await Promise.all(matches.map(async src=>{
+  if(state.profiles.has(src.key))return;
+  try{const r=await fetch("./data/"+src.profile);if(!r.ok)throw Error(r.status);state.profiles.set(src.key,await r.json());}
+  catch(_){state.selected.delete(src.key);}
+ }));
+ renderSources();renderChart();
+}
 function switchView(v){document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("active",b.dataset.view===v));$("compareView").classList.toggle("active",v==="compare");$("catalogView").classList.toggle("active",v==="catalog");}
 function visibleSources(){const q=$("searchInput").value.trim().toLowerCase();return state.sources.filter(x=>{const t=[x.dataset.id,x.dataset.name,x.dataset.domain,x.instrument_name,x.source_id].join(" ").toLowerCase();return(!q||t.includes(q))&&(!state.domain||x.dataset.domain===state.domain)&&(!state.unit||x.axis_unit===state.unit);});}
 function renderSources(){
@@ -70,7 +95,7 @@ async function toggle(k,on){
  }else state.selected.delete(k);
  renderSources();renderChart();
 }
-function renderChart(){if(!state.selected.size){$("chartNote").textContent="Selecione fontes para iniciar a comparação.";$("spectrumChart").innerHTML='<text x="50%" y="50%" text-anchor="middle" class="axis-text">As curvas médias aparecem aqui</text>';$("legend").innerHTML="";$("bandLegend").innerHTML="";$("profileInfo").innerHTML="";return;}const s=[...state.selected].map(k=>state.sources.find(x=>x.key===k)).filter(Boolean);$("chartNote").textContent=s.length+" perfil(is) · eixo "+s[0].axis_unit+" · sem interpolação entre canais";chart();}
+function renderChart(){if(!state.selected.size){$("chartNote").textContent=state.presetLabel?"Nenhuma curva disponível para este grupo.":"Selecione fontes para iniciar a comparação.";$("spectrumChart").innerHTML='<text x="50%" y="50%" text-anchor="middle" class="axis-text">As curvas médias aparecem aqui</text>';$("legend").innerHTML="";$("bandLegend").innerHTML="";$("profileInfo").innerHTML="";return;}const s=[...state.selected].map(k=>state.sources.find(x=>x.key===k)).filter(Boolean);$("chartNote").textContent=s.length+" perfil(is) · eixo "+s[0].axis_unit+" · sem interpolação entre canais"+(state.presetLabel?" · "+state.presetLabel:"");chart();}
 function chart(){
  const selected=[...state.selected].map(k=>state.sources.find(x=>x.key===k)).filter(Boolean);if(!selected.length)return;
  const svg=$("spectrumChart"),W=Math.max(320,svg.clientWidth||800),H=370;
