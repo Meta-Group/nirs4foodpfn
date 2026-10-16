@@ -94,10 +94,15 @@
       <section class="panel table-panel">
           <div class="panel-head">
           <div><p class="eyebrow">INVENTÁRIO · PROJETO + NIRS4ALL</p><h2>Matrizes disponíveis</h2></div>
-          <label class="searchbox table-search"><span>⌕</span><input id="tableSearch" type="search" placeholder="Filtrar catálogo…"></label>
+          <div class="catalog-filters">
+            <select id="taskFilter" aria-label="Filtrar por tipo de tarefa">
+              <option value="">Todas as tarefas</option><option value="classification">Classificação</option><option value="regression">Regressão</option><option value="mixed">Mista</option><option value="uncertain">Revisar</option><option value="unknown">Não avaliada</option><option value="none">Sem alvo declarado</option>
+            </select>
+            <label class="searchbox table-search"><span>⌕</span><input id="tableSearch" type="search" placeholder="Filtrar catálogo…"></label>
+          </div>
         </div>
         <div class="table-scroll"><table><thead><tr>
-          <th>Dataset</th><th>Domínio</th><th>Matriz(es)</th><th>Faixa</th><th>Alvos</th><th>Processamento</th><th>Acesso</th>
+          <th>Dataset</th><th>Domínio</th><th>Matriz(es)</th><th>Faixa</th><th>Alvos</th><th>Tarefa</th><th>Processamento</th><th>Acesso</th>
         </tr></thead><tbody id="catalogRows"></tbody></table></div>
         <p class="table-foot" id="tableFoot"></p>
       </section>
